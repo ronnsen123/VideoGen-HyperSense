@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HyperSense App
 
-## Getting Started
+Next.js app for the HyperSense video-creation wizard. The UI creates a project, captures a website, generates narrator scripts and audio, reviews a storyboard, then renders a HyperFrames video.
 
-First, run the development server:
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build And Checks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+The build script uses `next build --webpack` because this local Next 16 setup can fall back to WASM SWC bindings, while Turbopack requires native bindings on this platform.
 
-To learn more about Next.js, take a look at the following resources:
+## Environment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Required for LLM story generation:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+GEMINI_API_KEY=...
+```
 
-## Deploy on Vercel
+Accepted alternative:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+GOOGLE_API_KEY=...
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Optional cloud audio providers:
+
+```bash
+HEYGEN_API_KEY=...
+ELEVENLABS_API_KEY=...
+```
+
+Without an LLM key, story generation falls back to template-based scripts.
+
+## Local Pipeline Assumptions
+
+The app expects to run from this repository's `app/` directory. Pipeline paths resolve one directory up to:
+
+- `.agents/skills/product-launch-video`
+- `.agents/skills/hyperframes-animation`
+- `videos/`
+
+Project metadata is persisted to `videos/projects.json`; generated project artifacts live in `videos/<project-name>/`.
+
+## Important Files
+
+- `src/app/create/*` - the seven-step wizard UI
+- `src/app/api/projects/*` - project and pipeline API routes
+- `src/lib/pipeline/phases/*` - capture, story, audio, design, and render phases
+- `src/lib/store.ts` - file-backed project metadata store

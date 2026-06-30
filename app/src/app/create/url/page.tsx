@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 export default function UrlPage() {
   const router = useRouter();
@@ -18,9 +19,22 @@ export default function UrlPage() {
   const [captureComplete, setCaptureComplete] = useState(false);
   const [tokens, setTokens] = useState<{
     title?: string;
+    description?: string;
     colors?: string[];
     fonts?: (string | { family: string; weights?: number[]; variable?: boolean })[];
+    headings?: (string | { level?: number; text: string; fontSize?: string; fontWeight?: string; color?: string })[];
+    sections?: {
+      heading?: string;
+      text?: string;
+      type?: string;
+      layout?: string;
+      backgroundColor?: string;
+      callsToAction?: string[];
+      assets?: string[];
+    }[];
+    ctas?: (string | { text: string; href?: string })[];
   } | null>(null);
+  const [contentExpanded, setContentExpanded] = useState(false);
   const [screenshots, setScreenshots] = useState<string[]>([]);
 
   async function handleCapture() {
@@ -211,6 +225,125 @@ export default function UrlPage() {
                 </div>
               </div>
             )}
+
+            {/* Extracted Content toggle */}
+            <div className="border-t pt-4">
+              <button
+                type="button"
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full"
+                onClick={() => setContentExpanded(!contentExpanded)}
+              >
+                {contentExpanded ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+                Extracted Content
+              </button>
+
+              {contentExpanded && (
+                <div className="mt-3 space-y-4">
+                  {/* Description */}
+                  {tokens.description && (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                        Description
+                      </p>
+                      <p className="text-sm leading-relaxed">
+                        {tokens.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Headings */}
+                  {tokens.headings && tokens.headings.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                        Headings
+                      </p>
+                      <ul className="space-y-1">
+                        {tokens.headings.map((h, i) => {
+                          const text =
+                            typeof h === "string" ? h : h.text;
+                          const level =
+                            typeof h === "string" ? undefined : h.level;
+                          return (
+                            <li
+                              key={i}
+                              className="text-sm flex items-start gap-2"
+                            >
+                              {level && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0 shrink-0 mt-0.5"
+                                >
+                                  H{level}
+                                </Badge>
+                              )}
+                              <span>{text}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Page Sections */}
+                  {tokens.sections && tokens.sections.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                        Page Sections
+                      </p>
+                      <div className="space-y-2">
+                        {tokens.sections.map((section, i) => (
+                          <div
+                            key={i}
+                            className="rounded-md border p-3 text-sm space-y-1"
+                          >
+                            <div className="flex items-center gap-2">
+                              {section.heading && (
+                                <span className="font-medium">
+                                  {section.heading}
+                                </span>
+                              )}
+                              {section.type && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0"
+                                >
+                                  {section.type}
+                                </Badge>
+                              )}
+                            </div>
+                            {section.text && (
+                              <p className="text-muted-foreground line-clamp-3">
+                                {section.text}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CTAs */}
+                  {tokens.ctas && tokens.ctas.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                        Calls to Action
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        {tokens.ctas.map((cta, i) => (
+                          <Badge key={i} variant="secondary">
+                            {typeof cta === "string" ? cta : cta.text}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <Button
               className="w-full mt-4"

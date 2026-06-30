@@ -179,11 +179,51 @@ function cleanBrandName(title: string): string {
 }
 
 function stripTags(text: string): string {
+  return cleanMarketingText(text);
+}
+
+function cleanMarketingText(text: string): string {
   return text
-    .replace(/\[(a|span|div|button|img|svg|strong|em|h[1-6]|p|li|ul|ol|nav|footer|header|section|main)\]\s*/gi, "")
-    .replace(/\[\/?\w+\]\s*/g, "")
+    .replace(/\[(?:\/)?[a-z][^\]]*\]/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\bOpens in a new window\b/gi, " ")
+    .replace(/\bLog In Required\b/gi, " ")
+    .replace(/\s+[,;:.!?]/g, (m) => m.trim())
     .replace(/\s{2,}/g, " ")
     .trim();
+}
+
+function isBoilerplateText(text: string): boolean {
+  const cleaned = cleanMarketingText(text).toLowerCase();
+  if (cleaned.length < 8) return true;
+  return /^(skip to|home$|learn$|menu$|search$|customer service|customer support|accounts? & trade|portfolio|watchlist|terms|privacy|cookie|stay connected|more to explore)/i.test(cleaned);
+}
+
+function isBoilerplateSentence(text: string): boolean {
+  const cleaned = cleanMarketingText(text);
+  if (isBoilerplateText(cleaned)) return true;
+  return /^(open an account|log in|fidelity\.com home|accounts? & trade|customer service|customer support|portfolio|watchlist|news & research)$/i.test(cleaned);
+}
+
+function trimToWords(text: string, maxWords: number): string {
+  const words = cleanMarketingText(text).split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return words.join(" ");
+  return `${words.slice(0, maxWords).join(" ")}.`;
+}
+
+function getPrimaryHeading(tokens: CaptureTokens): string {
+  const headings = tokens.headings
+    .map((h) => (typeof h === "string" ? h : h.text))
+    .map(cleanMarketingText)
+    .filter((h) => !isBoilerplateText(h));
+
+  return headings.find((h) => h.length > 8) || cleanBrandName(tokens.title) || "The Story";
+}
+
+function titleFromHeading(heading: string, fallback: string): string {
+  const cleaned = cleanMarketingText(heading);
+  if (!isBoilerplateText(cleaned)) return cleaned.slice(0, 60);
+  return fallback;
 }
 
 function extractSentences(text: string, max: number): string[] {
@@ -192,8 +232,9 @@ function extractSentences(text: string, max: number): string[] {
     .split(/(?<=[.!?])\s+|(?<=\w)\s{2,}(?=[A-Z])/)
     .map((s) => s.trim())
     .filter((s) => s.length > 15 && s.length < 200)
+    .filter((s) => !isBoilerplateSentence(s))
     .filter((s) => !s.match(
-      /^(https?:|See footer|Terms apply|Cookie|Skip to|Content provided|Rate as of|Pebble uses|Commission-free|\*|Crypto services|Securities|The experience)/i
+      /^(https?:|See footer|Terms apply|Cookie|Skip to|Content provided|Rate as of|Pebble uses|Commission-free|\*|Crypto services|Securities|The experience|Fidelity\.com Home)/i
     ))
     .filter((s) => !s.match(/may contain errors|not intended to provide|not indicative of/i));
 
@@ -245,8 +286,10 @@ function buildSectionCandidates(
   const candidates: SectionCandidate[] = [];
 
   for (const section of sections) {
+    if ((section.type || "").toLowerCase() === "footer") continue;
     if (!section.text || section.text.length < 30) continue;
-    if (stripTags(section.heading || "").length < 3) continue;
+    const heading = stripTags(section.heading || "");
+    if (heading.length < 3 || isBoilerplateText(heading)) continue;
 
     const classification = classifySection(section);
     const sceneMap: Record<string, { type: string; role: string; persuasion: string }> = {
@@ -260,10 +303,12 @@ function buildSectionCandidates(
     const mapped = sceneMap[classification] || sceneMap["value-prop"];
 
     candidates.push({
-      heading: stripTags(section.heading || ""),
-      text: section.text,
+      heading,
+      text: cleanMarketingText(section.text),
       type: classification,
-      ctas: (section.callsToAction || []).filter((c) => c.length < 60),
+      ctas: (section.callsToAction || [])
+        .map(cleanMarketingText)
+        .filter((c) => c.length < 60 && !isBoilerplateText(c)),
       assets: section.assets || [],
       sceneType: mapped.type,
       role: mapped.role,
@@ -274,8 +319,11 @@ function buildSectionCandidates(
   if (candidates.length === 0 && visibleText.trim()) {
     const headings = tokens.headings.map((h) =>
       typeof h === "string" ? h : h.text
-    );
-    const lines = visibleText.split("\n").map(stripTags).filter((l) => l.length > 20);
+    ).map(cleanMarketingText).filter((h) => !isBoilerplateText(h));
+    const lines = visibleText
+      .split("\n")
+      .map(stripTags)
+      .filter((l) => l.length > 20 && !isBoilerplateSentence(l));
     const fallbackTypes = ["hook", "value-prop", "feature-showcase", "social-proof", "cta"];
 
     for (let i = 0; i < Math.min(5, lines.length); i++) {
@@ -356,27 +404,28 @@ function writeScript(
   tokens: CaptureTokens
 ): string {
   const sentences = extractSentences(candidate.text, 3);
+  const primaryHeading = getPrimaryHeading(tokens);
+  const description = cleanMarketingText(tokens.description || "");
+  const descriptionSentences = extractSentences(description, 2);
 
   switch (candidate.sceneType) {
     case "hook": {
-      const desc = stripTags(tokens.description || "");
-      const descSentences = desc.split(/(?<=[.!?])\s+/).filter((s) => s.length > 15 && s.length < 200);
-      if (descSentences.length >= 2) return `${descSentences[0]} ${descSentences[1]}`;
-      if (descSentences.length === 1) return descSentences[0];
+      if (descriptionSentences.length >= 2) return `${descriptionSentences[0]} ${descriptionSentences[1]}`;
+      if (descriptionSentences.length === 1) return descriptionSentences[0];
       if (sentences.length >= 1) {
-        return `${sentences[0]}${sentences[1] ? " " + sentences[1] : ""}`;
+        return trimToWords(`${sentences[0]}${sentences[1] ? " " + sentences[1] : ""}`, 34);
       }
-      return `Introducing ${brandName} — a smarter way to get things done.`;
+      return `Here is what to know about ${primaryHeading.toLowerCase()} from ${brandName}.`;
     }
 
     case "value-prop": {
-      if (sentences.length >= 2) return `${sentences[0]} ${sentences[1]}`;
+      if (sentences.length >= 2) return trimToWords(`${sentences[0]} ${sentences[1]}`, 36);
       if (sentences.length === 1) return sentences[0];
-      return `${brandName} delivers real value where it matters most.`;
+      return `${brandName} helps make ${primaryHeading.toLowerCase()} easier to understand.`;
     }
 
     case "feature-showcase": {
-      if (sentences.length >= 2) return `${sentences[0]} ${sentences[1]}`;
+      if (sentences.length >= 2) return trimToWords(`${sentences[0]} ${sentences[1]}`, 36);
       if (sentences.length === 1) return sentences[0];
       const features = candidate.ctas.filter((c) => c.length < 30 && !c.match(/^(learn more|get started|download)/i));
       if (features.length >= 2) {
@@ -407,10 +456,10 @@ function writeScript(
     case "cta": {
       const firstCta = tokens.ctas[0];
       const ctaText = firstCta
-        ? typeof firstCta === "string" ? firstCta : firstCta.text
+        ? cleanMarketingText(typeof firstCta === "string" ? firstCta : firstCta.text)
         : "Get started";
       if (sentences.length > 0 && sentences[0].length > 30) {
-        return `${sentences[0]} ${ctaText} with ${brandName} today.`;
+        return trimToWords(`${sentences[0]} ${ctaText} with ${brandName} today.`, 32);
       }
       return `${ctaText}. Start your journey with ${brandName} today.`;
     }
@@ -422,15 +471,11 @@ function writeScript(
 
 function buildPremise(tokens: CaptureTokens, brandName: string): string {
   if (tokens.description && tokens.description.length > 20) {
-    const cleaned = stripTags(tokens.description);
+    const cleaned = cleanMarketingText(tokens.description);
     if (cleaned.length > 20) return cleaned;
   }
-  const headings = tokens.headings
-    .map((h) => (typeof h === "string" ? h : h.text))
-    .filter((h) => h.length > 5);
-  if (headings.length > 0) {
-    return `${brandName} — ${headings[0]}`;
-  }
+  const heading = getPrimaryHeading(tokens);
+  if (heading.length > 0) return `${brandName} explains ${heading.toLowerCase()}.`;
   return `Learn what ${brandName} has to offer.`;
 }
 
@@ -478,11 +523,18 @@ export function generateDraftNarratorScripts(
 
   const scenes = selected.map((candidate, i) => {
     const script = writeScript(candidate, brandName, tokens);
+    const fallbackHeadings = [
+      getPrimaryHeading(tokens),
+      "Key Takeaways",
+      "How It Works",
+      "Why It Matters",
+      "Next Step",
+    ];
 
     return {
       sceneNumber: i + 1,
       scene_id: `scene_${i + 1}`,
-      heading: candidate.heading.slice(0, 60),
+      heading: titleFromHeading(candidate.heading, fallbackHeadings[i] || `Scene ${i + 1}`),
       script,
       narrativeIntent: {
         type: candidate.sceneType,
@@ -529,13 +581,57 @@ export async function generateNarratorScripts(
   return generateDraftNarratorScripts(projectDir, config);
 }
 
+export function normalizeNarratorScripts(scripts: NarratorScripts): NarratorScripts {
+  const scenes = (scripts.scenes || []).map((scene, i) => {
+    const sceneNumber = Number.isFinite(scene.sceneNumber) ? scene.sceneNumber : i + 1;
+    const heading = cleanMarketingText(scene.heading || `Scene ${sceneNumber}`);
+    const script = cleanMarketingText(scene.script || "");
+
+    return {
+      ...scene,
+      sceneNumber,
+      scene_id: scene.scene_id || `scene_${sceneNumber}`,
+      heading: isBoilerplateText(heading) ? `Scene ${sceneNumber}` : heading,
+      script,
+      estimatedDuration: Number.isFinite(scene.estimatedDuration)
+        ? scene.estimatedDuration
+        : Math.round((scripts.estimatedDuration || 30) / Math.max(scripts.scenes.length, 1)),
+    };
+  });
+
+  return {
+    ...scripts,
+    premise: cleanMarketingText(scripts.premise || ""),
+    scenes,
+  };
+}
+
+export function shouldRegenerateNarratorScripts(scripts: NarratorScripts): boolean {
+  if (!scripts.premise || scripts.premise.trim().length < 20) return true;
+  if (!scripts.scenes?.length) return true;
+
+  return scripts.scenes.some((scene, i) => {
+    const text = `${scene.heading || ""} ${scene.script || ""}`;
+    return (
+      !Number.isFinite(scene.sceneNumber) ||
+      !scene.scene_id ||
+      /\[[a-z][^\]]*\]/i.test(text) ||
+      /Sundefined|undefined/i.test(text) ||
+      isBoilerplateText(scene.heading || "") ||
+      isBoilerplateSentence(scene.script || "") ||
+      (i === 0 && /skip to main content|fidelity\.com home/i.test(scene.script || ""))
+    );
+  });
+}
+
 export function saveNarratorScripts(
   projectDir: string,
   scripts: NarratorScripts
 ): void {
+  const normalized = normalizeNarratorScripts(scripts);
   fs.writeFileSync(
     path.join(projectDir, "narrator_scripts.json"),
-    JSON.stringify(scripts, null, 2)
+    JSON.stringify(normalized, null, 2)
   );
 }
 
@@ -544,5 +640,5 @@ export function loadNarratorScripts(
 ): NarratorScripts | null {
   const p = path.join(projectDir, "narrator_scripts.json");
   if (!fs.existsSync(p)) return null;
-  return JSON.parse(fs.readFileSync(p, "utf-8"));
+  return normalizeNarratorScripts(JSON.parse(fs.readFileSync(p, "utf-8")));
 }

@@ -4,6 +4,7 @@ import {
   generateNarratorScripts,
   saveNarratorScripts,
   loadNarratorScripts,
+  shouldRegenerateNarratorScripts,
 } from "@/lib/pipeline/phases/story";
 
 export async function GET(
@@ -16,7 +17,7 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   let scripts = loadNarratorScripts(project.dir);
-  if (!scripts) {
+  if (!scripts || shouldRegenerateNarratorScripts(scripts)) {
     scripts = await generateNarratorScripts(project.dir, project.config);
     saveNarratorScripts(project.dir, scripts);
   }

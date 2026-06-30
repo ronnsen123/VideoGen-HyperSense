@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import type {
   NarratorScripts,
   NarratorScene,
@@ -118,7 +117,10 @@ export default function DesignPage() {
   }, [projectId]);
 
   useEffect(() => {
-    loadPlan();
+    const timer = window.setTimeout(() => {
+      void loadPlan();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadPlan]);
 
   async function handleSave() {
@@ -201,7 +203,7 @@ export default function DesignPage() {
 
       {/* Storyboard frames */}
       <div className="space-y-4">
-        {storyboard.map((sb, i) => (
+        {storyboard.map((sb) => (
           <Card key={sb.scene.scene_id} className="overflow-hidden">
             <CardContent className="p-0">
               <div className="flex">

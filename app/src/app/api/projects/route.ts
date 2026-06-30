@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const id = `${projectName}-${Date.now()}`;
 
   try {
-    const dir = await initProject(projectName);
+    const dir = await initProject(id);
 
     const state: ProjectState = {
       id,

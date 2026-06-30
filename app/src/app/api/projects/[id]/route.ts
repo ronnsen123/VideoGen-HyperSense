@@ -17,30 +17,32 @@ export async function GET(
 
   const result: Record<string, unknown> = { ...project };
 
-  const tokensPath = path.join(
-    project.dir,
-    "capture/extracted/tokens.json"
-  );
-  if (fs.existsSync(tokensPath)) {
-    const tokens: CaptureTokens = JSON.parse(
-      fs.readFileSync(tokensPath, "utf-8")
+  if (project.status !== "error") {
+    const tokensPath = path.join(
+      project.dir,
+      "capture/extracted/tokens.json"
     );
-    result.tokens = tokens;
-  }
+    if (fs.existsSync(tokensPath)) {
+      const tokens: CaptureTokens = JSON.parse(
+        fs.readFileSync(tokensPath, "utf-8")
+      );
+      result.tokens = tokens;
+    }
 
-  const inferencePath = path.join(project.dir, "design-system/inference.json");
-  if (fs.existsSync(inferencePath)) {
-    const inference: DesignInference = JSON.parse(
-      fs.readFileSync(inferencePath, "utf-8")
-    );
-    result.inference = inference;
-  }
+    const inferencePath = path.join(project.dir, "design-system/inference.json");
+    if (fs.existsSync(inferencePath)) {
+      const inference: DesignInference = JSON.parse(
+        fs.readFileSync(inferencePath, "utf-8")
+      );
+      result.inference = inference;
+    }
 
-  const screenshotsDir = path.join(project.dir, "capture/screenshots");
-  if (fs.existsSync(screenshotsDir)) {
-    result.screenshots = fs
-      .readdirSync(screenshotsDir)
-      .filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f));
+    const screenshotsDir = path.join(project.dir, "capture/screenshots");
+    if (fs.existsSync(screenshotsDir)) {
+      result.screenshots = fs
+        .readdirSync(screenshotsDir)
+        .filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f));
+    }
   }
 
   const audioMetaPath = path.join(project.dir, "audio_meta.json");

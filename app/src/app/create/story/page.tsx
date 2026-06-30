@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { NarratorScripts } from "@/lib/pipeline/types";
 
@@ -42,7 +41,11 @@ export default function StoryPage() {
       : null;
 
   const loadScripts = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      setError("No project found. Please start from Step 1.");
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/projects/${projectId}/story`);
       if (!res.ok) throw new Error("Failed to load scripts");
@@ -57,7 +60,10 @@ export default function StoryPage() {
   }, [projectId]);
 
   useEffect(() => {
-    loadScripts();
+    const timer = window.setTimeout(() => {
+      void loadScripts();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadScripts]);
 
   function updatePremise(value: string) {

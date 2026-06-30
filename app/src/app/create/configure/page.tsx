@@ -2,21 +2,68 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  Clock3,
+  Monitor,
+  RectangleVertical,
+  Sparkles,
+  Square,
+  Target,
+  Wand2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PRESETS } from "@/lib/pipeline/presets";
+
+const GOALS = [
+  {
+    value: "product-overall",
+    label: "Balanced",
+    detail: "Best default",
+    icon: Sparkles,
+  },
+  {
+    value: "headline-feature",
+    label: "Feature",
+    detail: "Show one thing",
+    icon: Target,
+  },
+  {
+    value: "offer-cta",
+    label: "Conversion",
+    detail: "Drive action",
+    icon: ArrowRight,
+  },
+];
+
+const DURATIONS = [
+  { value: "30", label: "30s", detail: "Fast social cut" },
+  { value: "60", label: "60s", detail: "Standard promo" },
+  { value: "90", label: "90s", detail: "More detail" },
+];
+
+const FORMATS = [
+  { value: "16:9", label: "Wide", detail: "YouTube, web", icon: Monitor },
+  { value: "9:16", label: "Vertical", detail: "Reels, TikTok", icon: RectangleVertical },
+  { value: "1:1", label: "Square", detail: "Feed posts", icon: Square },
+];
 
 export default function ConfigurePage() {
   const router = useRouter();
   const [focus, setFocus] = useState("product-overall");
-  const [duration, setDuration] = useState("60");
+  const [duration, setDuration] = useState("30");
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [preset, setPreset] = useState("auto");
-
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
 
   async function handleNext() {
@@ -54,121 +101,189 @@ export default function ConfigurePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Step 2: Configure Video</h1>
-        <p className="text-muted-foreground mt-1">
-          Choose the video focus, duration, aspect ratio, and visual style.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="pt-6 space-y-3">
-            <Label className="text-sm font-semibold">Video Focus</Label>
-            <RadioGroup value={focus} onValueChange={setFocus}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="product-overall" id="f1" />
-                <Label htmlFor="f1">Product Overall</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="headline-feature" id="f2" />
-                <Label htmlFor="f2">Headline Feature</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="offer-cta" id="f3" />
-                <Label htmlFor="f3">Offer & CTA</Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6 space-y-3">
-            <Label className="text-sm font-semibold">Duration</Label>
-            <RadioGroup value={duration} onValueChange={setDuration}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="30" id="d1" />
-                <Label htmlFor="d1">~30 seconds</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="60" id="d2" />
-                <Label htmlFor="d2">~60 seconds</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="90" id="d3" />
-                <Label htmlFor="d3">~90 seconds</Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6 space-y-3">
-            <Label className="text-sm font-semibold">Aspect Ratio</Label>
-            <RadioGroup value={aspectRatio} onValueChange={setAspectRatio}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="16:9" id="a1" />
-                <Label htmlFor="a1">16:9 Landscape</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="9:16" id="a2" />
-                <Label htmlFor="a2">9:16 Portrait</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="1:1" id="a3" />
-                <Label htmlFor="a3">1:1 Square</Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div>
-        <Label className="text-sm font-semibold">Visual Style Preset</Label>
-        <p className="text-sm text-muted-foreground mb-3">
-          Choose &quot;Auto&quot; to let the system infer the best style from
-          the captured website, or pick one manually.
-        </p>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          <button
-            onClick={() => setPreset("auto")}
-            className={cn(
-              "p-4 rounded-lg border-2 text-left transition-colors",
-              preset === "auto"
-                ? "border-primary bg-primary/5"
-                : "border-muted hover:border-primary/50"
-            )}
-          >
-            <div className="font-semibold text-sm">Auto-Detect</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Inferred from website
-            </div>
-          </button>
-
-          {PRESETS.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setPreset(p.id)}
-              className={cn(
-                "p-4 rounded-lg border-2 text-left transition-colors",
-                preset === p.id
-                  ? "border-primary bg-primary/5"
-                  : "border-muted hover:border-primary/50"
-              )}
-            >
-              <div className="font-semibold text-sm">{p.label}</div>
-              <div className="flex gap-1 mt-2 flex-wrap">
-                {p.bestFor.slice(0, 2).map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </button>
-          ))}
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Step 2: Setup</h1>
+          <p className="mt-1 text-muted-foreground">
+            Start with the recommended promo settings. Adjust only what matters.
+          </p>
         </div>
+        <div className="hidden rounded-lg border px-3 py-2 text-right sm:block">
+          <div className="text-xs text-muted-foreground">Recommended</div>
+          <div className="text-sm font-semibold">30s wide promo</div>
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="space-y-6 pt-6">
+          <section className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Target className="size-4" />
+              Goal
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {GOALS.map((option) => {
+                const Icon = option.icon;
+                const active = focus === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setFocus(option.value)}
+                    className={cn(
+                      "flex min-h-20 flex-col items-start justify-between rounded-lg border p-3 text-left transition-colors",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:border-primary/50 hover:bg-muted"
+                    )}
+                  >
+                    <Icon className="size-4" />
+                    <span>
+                      <span className="block text-sm font-semibold">
+                        {option.label}
+                      </span>
+                      <span
+                        className={cn(
+                          "block text-xs",
+                          active
+                            ? "text-primary-foreground/75"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {option.detail}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Clock3 className="size-4" />
+              Length
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {DURATIONS.map((option) => {
+                const active = duration === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setDuration(option.value)}
+                    className={cn(
+                      "rounded-lg border px-3 py-3 text-left transition-colors",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:border-primary/50 hover:bg-muted"
+                    )}
+                  >
+                    <span className="block text-sm font-semibold">
+                      {option.label}
+                    </span>
+                    <span
+                      className={cn(
+                        "block text-xs",
+                        active
+                          ? "text-primary-foreground/75"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {option.detail}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Monitor className="size-4" />
+              Format
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {FORMATS.map((option) => {
+                const Icon = option.icon;
+                const active = aspectRatio === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setAspectRatio(option.value)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border p-3 text-left transition-colors",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:border-primary/50 hover:bg-muted"
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    <span>
+                      <span className="block text-sm font-semibold">
+                        {option.label}
+                      </span>
+                      <span
+                        className={cn(
+                          "block text-xs",
+                          active
+                            ? "text-primary-foreground/75"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {option.detail}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </CardContent>
+      </Card>
+
+      <div className="rounded-lg border bg-muted/20 p-4">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((value) => !value)}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <Wand2 className="size-4" />
+            Visual style
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {preset === "auto"
+              ? "Auto-detect"
+              : PRESETS.find((item) => item.id === preset)?.label}
+          </span>
+        </button>
+
+        {showAdvanced && (
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Auto uses the captured site colors, typography, and layout cues.
+            </p>
+            <Select
+              value={preset}
+              onValueChange={(value) => value && setPreset(value)}
+            >
+              <SelectTrigger className="w-full sm:w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto-detect</SelectItem>
+                {PRESETS.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-between">
@@ -176,7 +291,8 @@ export default function ConfigurePage() {
           Back
         </Button>
         <Button onClick={handleNext} disabled={saving}>
-          {saving ? "Saving..." : "Continue to Story"}
+          {saving ? "Saving..." : "Continue"}
+          <ArrowRight className="size-4" />
         </Button>
       </div>
     </div>

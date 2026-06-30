@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,14 +70,7 @@ export default function AudioPage() {
       ? sessionStorage.getItem("projectId")
       : null;
 
-  useEffect(() => {
-    if (done && projectId) {
-      fetchAudioResults();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done]);
-
-  async function fetchAudioResults() {
+  const fetchAudioResults = useCallback(async () => {
     if (!projectId) return;
     try {
       const res = await fetch(`/api/projects/${projectId}`);
@@ -105,7 +98,15 @@ export default function AudioPage() {
     } catch {
       // non-critical — players just won't show
     }
-  }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!done || !projectId) return;
+    const timer = window.setTimeout(() => {
+      void fetchAudioResults();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [done, projectId, fetchAudioResults]);
 
   async function handleGenerate() {
     if (!projectId) return;

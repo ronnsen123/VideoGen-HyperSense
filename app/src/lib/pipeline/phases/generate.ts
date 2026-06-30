@@ -45,7 +45,7 @@ export async function runGenerate(
       throw new Error(`Prep failed: ${prepResult.stderr}`);
     }
     emit({ phase: "prep", status: "completed" });
-  } catch (err) {
+  } catch {
     emit({ phase: "prep", status: "completed", message: "Prep skipped (script not available)" });
     generateMinimalGroupSpec(projectDir);
   }
@@ -188,7 +188,7 @@ function buildSceneHtml(
   <script>
     (function() {
       var tl = gsap.timeline({ paused: true });
-      ${getAnimationScript(type, id)}
+      ${getAnimationScript(type)}
       window.__timelines = window.__timelines || {};
       window.__timelines["${id}"] = tl;
     })();
@@ -239,7 +239,7 @@ function getExtraStyles(type: string): string {
   return "";
 }
 
-function getAnimationScript(type: string, id: string): string {
+function getAnimationScript(type: string): string {
   if (type === "value-prop") {
     return `
       tl.fromTo('.chip', {y:20, opacity:0}, {y:0, opacity:1, duration:0.45, ease:'power2.out'}, 0.2);
